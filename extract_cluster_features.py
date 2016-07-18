@@ -72,73 +72,62 @@ std_age = math.sqrt(sum(ages_sq)/len(ages)-mean_age**2)
 ###vector that summarizes the age features of cluster
 age_summary_cluster = [mean_age,std_age,missing_age]
 
-##############Location cluster features
 
-def get_coord(axis,cluster): #axis is either centroid_lat or centroid_lon
+########LOCATION features
+
+
+inProj = Proj(init='epsg:4326')
+outProj = Proj(init='epsg:3857')
+
+def get_coord(cluster): #axis is either centroid_lat or centroid_lon
     for item in cluster:
         if 'lattice-location' in item['extractions']:
-            yield (d['context']['location'][axis] for d in item['extractions']['lattice-location']['results']  if d['context']['location'][axis] is not None)
+            tup = tuple(transform(inProj,outProj,d['context']['city']['centroid_lon'],
+                             d['context']['city']['centroid_lat']) for d in item['extractions']['lattice-location']['results']  if d['context']['city']['centroid_lat'] is not None)
+            if tup:#add code to aggregate multiple locations into one
+                yield tup[0]
+locations_webMer = [coord for coord in get_coord(cluster)] 
+
+num_found_loc = len(locations_webMer)
+missing_lat = len(cluster)-num_found_loc
+missing_lat_proportion = np.float(missing_lat)/len(cluster)
 
 def get_coord_prob(cluster): #axis is either centroid_lat or centroid_lon
     for item in cluster:
         if 'lattice-location' in item['extractions']:
-            yield map(float,(d['probability'] for d in item['extractions']['lattice-location']['results'] if d['context']['location']['centroid_lat'] is not None))
-
-###Extract latitudes for all ads
-latitudes = [lat for lat in get_coord('centroid_lat',cluster)]
-missing_lat = len(cluster)-len(latitudes)
-
-latitudes = tuple(chain(*latitudes))  
-
-###Extract longitude for all ads
-longitudes = [lon for lon in get_coord('centroid_lon',cluster)]
-missing_lon = len(cluster)-len(longitudes)
-
-longitudes = tuple(chain(*longitudes)) 
-
-###Calculate range of latitude (max - min)
-range_lat = max(latitudes)-min(latitudes)
-
-###Calculate range of longitude (max-min)
-range_lon = max(longitudes)-min(longitudes)
-
-###calculate area of rectangle
-area_cluster = range_lat*range_lon
-
+            prob = map(float,(d['probability'] for d in item['extractions']['lattice-location']['results'] if d['context']['city']['centroid_lat'] is not None))
+            if prob:
+                yield prob[0] ###MODIFY to extract the prob needed, according to how locations are aggregated
 ###Extract probabilities of location
 loc_prob = [prob for prob in get_coord_prob(cluster)]
-loc_prob = tuple(chain(*loc_prob)) 
 
-###Calculate centroid of cluster - analogous to center of mass
-loc_prob = np.array(loc_prob)
-latitudes = np.array(latitudes)
-longitudes = np.array(longitudes)
+locations_webMer=np.array(locations_webMer)
 
-centroid_lat = sum(np.multiply(latitudes,loc_prob))/sum(loc_prob)
-centroid_lon = sum(np.multiply(longitudes,loc_prob))/sum(loc_prob)
+#Extract mean of xaxis
+centroid_cluster = np.mean(locations_webMer,0)
 
-###Calculate how concentrated the cluster is
+###Measure the area the cluster covers
+min_coord = np.amin(locations_webMer,0)
+max_coord = np.amax(locations_webMer,0)
 
-#calculate distance of each point to center of cluster
-lat_diff = [(l - centroid_lat)**2 for l in latitudes]
-lon_diff = [(l - centroid_lon)**2 for l in longitudes]
+dif_extreme_coord = np.subtract(max_coord,min_coord)
+area_centroid = dif_extreme_coord[0]*dif_extreme_coord[1]
 
-sq_dist_centroid = np.add(lat_diff,lon_diff)
-dist_centroid = [math.sqrt(sq_dist) for sq_dist in sq_dist_centroid]
+###Measure how concentrated ads are
+#distance from each point to the centroid - add 1 to avoid errors when all ads are in same location 
 
-disp_metric = sum(np.multiply(dist_centroid,loc_prob))  
-#disp_metric = sum(np.multiply(np.log(dist_centroid),loc_prob))  ###alternatively we can sum over the log
+sqdif_coord = a = np.zeros(shape=(num_found_loc,2))
+sqdif_coord[:,0] = [(np.abs(x - centroid_cluster[0])+1)**2 for x in locations_webMer[:,0]]
+sqdif_coord[:,1] = [(np.abs(x - centroid_cluster[1])+1)**2 for x in locations_webMer[:,1]]
 
-###########################################
-#for each cluster:
-           #2. obtain matrix for cluster
-           #3. summarize
+dist_centroid = [np.sqrt(sq_dist) for sq_dist in sq_dist_centroid]
+disp_metric = sum(np.multiply(dist_centroid,loc_prob))/num_found_loc  ###alternatively we can sum over the log
 
 
-##
-##documents = ['I am a test string','I am another test string','and a third test string']
-##    small_docs = ['I am a test string','I am another test string']
-##    A =  TextFeaturizer(documents)#Count Vectorizer
-##    X = A.get_text_features(small_docs)
-##    B =  TextFeaturizer(documents,options=BASE_OPTIONS_TFIDF,Count=False)#TFIDF Vectorizer
-##    X = B.get_text_features(small_docs)
+
+location_summary_cluster = np.hstack((missing_lat_proportion,np.squeeze(centroid_cluster),area_cluster,disp_metric))
+
+
+
+
+
