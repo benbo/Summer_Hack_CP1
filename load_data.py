@@ -29,16 +29,36 @@ def load_files(file_names=None, max_lines=None):
     text, labels, ad_id, phone = zip(*(d for d in _extract_data(file_names)))
     return text, labels, ad_id, phone
 
-def load_gzip_json(file_names=None):
+def load_gzip_json(filenames=[],skip=None):
     """
     generator to load gzipped json objects
 
     :param file_names: List of files paths to load
     """
-    for file_name in filenames:                                                                                                                                                                             
-        with gz.open(file_name, 'r') as f:                                                                                                                                                                  
-            for line in f:                                                                                                                                                                                  
-                yield json.loads(line)  
+    if not skip is None:
+        for file_name in filenames:                                   
+            with gz.open(file_name, 'r') as f:                        
+                for line in f:                                        
+                    yield json.loads(line)  
+    else:
+        if not isinstance(skip, frozenset):
+            skip = frozenset(skip)
+        for file_name in filenames:                                   
+            with gz.open(file_name, 'r') as f:                        
+                for line in f:                                        
+                    yield recurse_skip(json.loads(line),skip)
+
+def load_gzip_field(file_names=[],field='_id'):
+    """
+    generator to load gzipped json objects
+
+    :param file_names: List of files paths to load
+    """
+    for file_name in filenames:                                   
+        with gz.open(file_name, 'r') as f:                        
+            for line in f:                                        
+                yield json.loads(line)[field]
+
 
 
 def _extract_data(filenames):
@@ -66,3 +86,15 @@ def _extract_data(filenames):
                     count += 1
                 except:
                     print d
+
+def recurse_skip(node,skip):
+    if not isinstance(node, dict):
+            return node
+    else:
+        dupe_node = {}
+        for key, val in node.iteritems():
+            if not key in skip:
+                cur_node = recurse_skip(val, skip)
+                if cur_node:
+                    dupe_node[key] = cur_node
+        return dupe_node or None
