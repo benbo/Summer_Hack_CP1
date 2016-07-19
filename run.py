@@ -18,30 +18,27 @@ def main():
     #load data
     if os.path.isdir(args.labeled):
         filelist = [os.path.join(args.labeled,f) for f in os.listdir(args.labeled) if os.path.isfile(f)]
-        data = [d for d in load_gzip_json(filelist,skip)]
+        advertisements = {d[u'_id']:d for d in load_gzip_json(filelist,skip)}
     elif os.path.isfile(args.labeled):
-        data = [d for d in load_gzip_json([args.labeled],skip)]
+        advertisements = {d[u'doc_id']:d for d in load_gzip_json([args.labeled],skip)}
     else:
         raise OSError(2, 'No such file or directory', args.labeled)
-    exit()
-    #TODO ER and fold generation
-    #obtain clusters and generate folds
-    #Cluster ids are available in the json objects
     
     #get cluster ids and build a dictionary
     #this is going to be very slow
-    clusters = {}
-    for d in data:
-        key = d[u'cluster_id']
-        if key in clusters:
-            clusters[key].append(d)
+    cluster_to_id = {}
+    for key,d in advertisements.iteritems():
+        c_key = d[u'cluster_id']
+        if c_key in cluster_to_id:
+            cluster_to_id[c_key].append(key)
         else:
-            clusters[key] = [d]
-    del data
+            cluster_to_id[c_key] = [key]
 
+    #TODO ER and fold generation
+    #obtain clusters and generate folds
+    #Cluster ids are available in the json objects
 
-
-    #TODO join with lattice extractinos
+    #TODO join with lattice extractions
     
 
     #TODO featurize clusters
