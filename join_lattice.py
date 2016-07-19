@@ -27,10 +27,7 @@ if __name__=='__main__':
     lattice_root = args.lattice_root
     filename = args.infile
     #load CDR ids of labeled data
-    #ids = frozenset([i for i in load_gzip_field(file_names=[filename],field='_id')])
-    #TODO REMOVE, THIS IS JUST FOR TESTING, UNCOMMENT ABOVE
-    with codecs.open(args.infile, 'r', encoding='utf-8') as ins:                                                                                                                                  
-        ids = frozenset([line.rstrip() for line in ins])
+    ids = frozenset([i for i in load_gzip_field(file_names=[args.infile],field='doc_id')])
     #iterate through lattice extraction files, find matching ids
     bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
     if not os.path.exists('out'):
