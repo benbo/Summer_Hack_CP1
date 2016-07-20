@@ -46,7 +46,7 @@ if __name__=='__main__':
                                 print('failed to open file: {}'.format(inf))
                                 continue
                             for m in matches:
-                                outf.write(m+'\n')
+                                outf.write(m)
                             match_count +=len(matches)
                         search_count += 1
                         bar.update(match_count)
