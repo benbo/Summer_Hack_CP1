@@ -1,13 +1,13 @@
 import os
 import json
-#from featurize_clusters import TextFeaturizer
+from featurize_clusters import TextFeaturizer
 import numpy as np
-#from itertools import chain
-#from pyproj import Proj,transform
+from itertools import chain
+from pyproj import Proj,transform
 
 
-#INPROJ = Proj(init='epsg:4326')
-#OUTPROJ = Proj(init='epsg:3857')
+INPROJ = Proj(init='epsg:4326')
+OUTPROJ = Proj(init='epsg:3857')
 MV = 'None' # handle missing values this way
 
 def cluster_text_summary(textfeaturizer,text):
