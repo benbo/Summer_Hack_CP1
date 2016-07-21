@@ -1,4 +1,4 @@
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer,TfidfVectorizer
 BASE_OPTIONS_COUNT = {                        
             'strip_accents': None,                 
             'stop_words': 'english',               
