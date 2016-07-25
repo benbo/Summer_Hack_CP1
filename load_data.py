@@ -48,13 +48,13 @@ def load_gzip_json(filenames=[],skip=None):
                 for line in f:                                        
                     yield recurse_skip(json.loads(line),skip)
 
-def load_gzip_field(file_names=[],field='_id'):
+def load_gzip_field(file_names=[],field=u'doc_id'):
     """
     generator to load gzipped json objects
 
     :param file_names: List of files paths to load
     """
-    for file_name in filenames:                                   
+    for file_name in file_names:                                   
         with gz.open(file_name, 'r') as f:                        
             for line in f:                                        
                 yield json.loads(line)[field]
