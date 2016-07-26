@@ -1,47 +1,69 @@
 import os
 from featurize_clusters import TextFeaturizer
-from load_data import load_gzip_json
+from load_data import _extract_data_CP1
 from sklearn.grid_search import GridSearchCV, RandomizedSearchCV
-from sklearn.metrics import classification_report
-from sklearn.metrics import f1_score,fbeta_score      
+from sklearn.metrics import classification_report,f1_score,fbeta_score      
+from collections import defaultdict
+from operator import itemgetter
+from itertools import groupby
+import progressbar
+
 
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('-labeled','-l',required=True)
+    parser.add_argument('-ht',required=True)
+    parser.add_argument('-lattice','-l',required=True)
     #parser.add_argument('-outfile','-o',required=True)            
     parser.add_argument('--text_features', '-t',default='Count')
     args = parser.parse_args()
 
-    #add keys to be skipped to reduce memory footprint
-    skip = frozenset([u'raw_content',u'content_type'])
+    
+
     #load data
-    if os.path.isdir(args.labeled):
-        filelist = [os.path.join(args.labeled,f) for f in os.listdir(args.labeled) if os.path.isfile(f)]
-        advertisements = {d[u'_id']:d for d in load_gzip_json(filelist,skip)}
-    elif os.path.isfile(args.labeled):
-        advertisements = {d[u'doc_id']:d for d in load_gzip_json([args.labeled],skip)}
+    # function filters and only loads certain keys to keep memory footprint minimal
+    print 'loading HT data'
+    if os.path.isdir(args.ht):
+        filelist = [os.path.join(args.ht,f) for f in os.listdir(args.ht) if os.path.isfile(f)]
+        #advertisements = {d[u'doc_id']:d for d in _extract_data_CP1(filelist)}
+        advertisements = [d for d in _extract_data_CP1(filelist)]
+    elif os.path.isfile(args.ht):
+        #advertisements = {d[u'doc_id']:d for d in _extract_data_CP1([args.ht])}
+        advertisements = [d for d in _extract_data_CP1([args.ht])]
     else:
-        raise OSError(2, 'No such file or directory', args.labeled)
+        raise OSError(2, 'No such file or directory', args.ht)
+
+    print 'loading lattice data'
+    #load lattice extractions
+    lattice = {d[u'_id']:d for d in load_gzip_json([args.lattice])}
     
     #get cluster ids and build a dictionary
     #this is going to be very slow
-    cluster_to_id = {}
-    for key,d in advertisements.iteritems():
-        c_key = d[u'cluster_id']
-        if c_key in cluster_to_id:
-            cluster_to_id[c_key].append(key)
-        else:
-            cluster_to_id[c_key] = [key]
-
-    #TODO ER and fold generation
-    #obtain clusters and generate folds
-    #Cluster ids are available in the json objects
-
-    #TODO join with lattice extractions
+    #cluster_to_id = defaultdict(list)
+    #for key,d in advertisements.iteritems():
+    #    cluster_to_id[d[u'cluster_id']].append(key)
     
+    #sort by cluster id
+    print 'sorting ads'
+    keyfunc = itemgetter(u'cluster_id')
+    advertisements.sort(key=keyfunc)
+    
+    #iterate over clusters and create static features
+    bar = progressbar.ProgressBar(redirect_stdout=True)
+    print 'iterating over groups'
+    for k, g in bar(groupby(advertisements, keyfunc)):
+        #all features that only need to be generated once will be generated here
+        group = tuple(g)
+        keys = tuple(d[u'doc_id'] for d in group)
+        g_lattice = tuple(lattice[k] for k in keys if k in lattice)#this may fail if not all lattice data is available 
+        print 'group size: {}\nlattice group size: {}\n\n'.format(len(group),len(g_lattice))
+
+        
 
     #TODO featurize clusters
+    #
+    
+    
     #for fold in folds:
     folds=False
     if folds:

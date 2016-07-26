@@ -1,6 +1,6 @@
 import json
 import gzip as gz
-
+import progressbar#progressbar2
 
 class TextCleaner(object):
     def __init__(self):
@@ -32,14 +32,18 @@ def load_files(file_names=None, max_lines=None):
 def load_gzip_json(filenames=[],skip=None):
     """
     generator to load gzipped json objects
-
-    :param file_names: List of files paths to load
+    :param skip: set of keys to skip
     """
-    if not skip is None:
+    bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+    count = 0
+    if skip is None:
         for file_name in filenames:                                   
             with gz.open(file_name, 'r') as f:                        
                 for line in f:                                        
-                    yield json.loads(line)  
+                    yield json.loads(line)
+                    count += 1
+                    if count%1000==0:      
+                        bar.update(count)
     else:
         if not isinstance(skip, frozenset):
             skip = frozenset(skip)
@@ -47,6 +51,9 @@ def load_gzip_json(filenames=[],skip=None):
             with gz.open(file_name, 'r') as f:                        
                 for line in f:                                        
                     yield recurse_skip(json.loads(line),skip)
+                    count += 1
+                    if count%1000==0:      
+                        bar.update(count)
 
 def load_gzip_field(file_names=[],field=u'doc_id'):
     """
@@ -98,3 +105,39 @@ def recurse_skip(node,skip):
                 if cur_node:
                     dupe_node[key] = cur_node
         return dupe_node or None
+    
+def recurse_filter(node,filt):
+    if not isinstance(node, dict):
+            return None
+    else:
+        dupe_node = {}
+        for key, val in node.iteritems():
+            if not key in filt:
+                cur_node = recurse_filter(val, filt)
+                if cur_node:
+                    dupe_node[key] = cur_node
+            else:
+                dupe_node[key] = val
+    return dupe_node or None
+
+def _extract_data_CP1(filenames):
+    bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+    count = 0
+    s1 = frozenset([u'cluster_id',u'doc_id',u'title',u'text'])
+    s2 = frozenset([u'cluster_id',u'doc_id',u'title',u'extracted_text'])
+    for file_name in filenames:                                   
+        with gz.open(file_name, 'r') as f:                        
+            for line in f:
+                d = json.loads(line)
+                if u'text' in d[u'extractions']:
+                    yield recurse_filter(d,s1)
+                else:
+                    yield recurse_filter(d,s2)
+                count += 1
+                if count%1000==0:      
+                    bar.update(count)
+                    
+    
+    
+    
+    
