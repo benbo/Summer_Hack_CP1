@@ -2,6 +2,6 @@
 
 ## Dependencies
 ```python2.7
-pip2.7 install --user pyproj
+pip2.7 install --user pyproj,progressbar2
 ```
 
