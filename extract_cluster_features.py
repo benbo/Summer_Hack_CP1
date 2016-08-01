@@ -24,16 +24,16 @@ def temporal_summary(lattice_cluster):
         daterange = (dind[-1]-dind[0]).days#difference between first and last post in days
         df = Series(np.ones(len(posttimes)), index=dind)
 
-        #1day
+        #1day -aggregate by day
         df1 = df.resample('d').sum().fillna(0.0)
-        #2days
+        #2days -aggregate by 2-day window
         df2 = df1.resample("2d",closed='left').sum()
-        #monthly
+        #monthly -aggregate by month
         dfm = df1.resample("M",closed='left').sum() 
 
-        return np.array((daterange,df1.mean(),df1.min(),df1.max(),df1.median(),df2.mean(),df2.min(),df2.max(),df2.median(),dfm.mean(),dfm.min(),dfm.max(),dfm.median()))
+        return np.array((0.0,daterange,df1.mean(),df1.min(),df1.max(),df1.median(),df1.std(),df2.mean(),df2.min(),df2.max(),df2.median(),df2.std(),dfm.mean(),dfm.min(),dfm.max(),dfm.median(),dfm.std()))
     else:
-        return np.ones(13)*-1.0
+        return np.vstack((np.array([1.0]),np.zeros(16)))
 
 
 def cluster_text_summary(textfeaturizer,text):
@@ -62,7 +62,7 @@ def cluster_age_summary(lattice_cluster):
     return np.array((ages.mean(),ages.std(),np.median(ages),missing_age))
 
 def cluster_location_summary(lattice_cluster):
-    locations_webMer,loc_prob = zip(*((coord,prob) for coord,prob in get_locations(lattice_cluster)))
+    locations_webMer,loc_prob = zip(*tuple((coord,prob) for coord,prob in get_locations(lattice_cluster)))
 
     num_found_loc = len(locations_webMer)
     missing_lat = len(lattice_cluster)-num_found_loc
@@ -71,8 +71,10 @@ def cluster_location_summary(lattice_cluster):
     locations_webMer=np.array(locations_webMer)
 
     #Extract mean of xaxis
-    centroid_cluster = np.mean(locations_webMer,0)
-
+    #centroid_cluster = np.mean(locations_webMer,0)
+    centroid_cluster = np.average(locations_webMer,0,loc_prob)
+    
+    
     ###Measure the area the cluster covers
     min_coord = np.amin(locations_webMer,0)
     max_coord = np.amax(locations_webMer,0)
@@ -90,8 +92,8 @@ def cluster_location_summary(lattice_cluster):
     
     disp_metric = np.sum(np.multiply(dist_centroid,loc_prob))/num_found_loc  ###alternatively we can sum over the log
 
-    return np.hstack((missing_lat_proportion,np.squeeze(centroid_cluster),area_cluster,disp_metric))
-
+    #return np.hstack((missing_lat_proportion,np.squeeze(centroid_cluster),area_cluster,disp_metric))
+    return np.hstack((missing_lat_proportion,area_cluster,disp_metric))
 
 
 def get_age(cluster):
@@ -117,7 +119,9 @@ def get_locations(cluster):
             ret = tuple((coord,prob) for coord,prob in load_cities(item[u'extractions'][u'lattice-location'][u'results']))
             if ret:
                 coords,probs = zip(*ret)
-                yield np.array(coords).mean(0),np.array(probs).mean()
+                coords = np.array(coords)
+                probs = np.array(probs)
+                yield np.average(coords,0,probs),probs.mean()
 
 def load_cities(iterable):
     for d in iterable:
