@@ -71,11 +71,14 @@ def cluster_text_summary(textfeaturizer,text):
     return np.hstack((np.squeeze(np.array(mean_text)),agg_variance))
 
 def cluster_age_summary(ages,len_cluster):
-    missing_age = len_cluster-len(ages) #number of ads that do not contain age
-    ages = np.array(tuple(chain(*ages)))
+    if ages:
+        missing_age = len_cluster-len(ages) #number of ads that do not contain age
+        ages = np.array(tuple(chain(*ages)))
 
     #vector that summarizes the age features of cluster
-    return np.array((ages.mean(),ages.std(),np.median(ages),missing_age))
+        return np.array((np.array([0.0]),ages.mean(),ages.std(),np.median(ages),missing_age))
+    else:
+        return np.hstack((np.array([1.0]),np.zeros(4)))
 
 def cluster_location_summary(locations_webMer,loc_prob,len_cluster):
     if locations_webMer:
@@ -173,6 +176,7 @@ def get_age(cluster):
     for item in cluster:
         if 'lattice-age' in item[u'extractions']:
             yield map(float,(d[u'value'] for d in item[u'extractions'][u'lattice-age'][u'results']))
+
 
                 
 def load_cities(iterable):
