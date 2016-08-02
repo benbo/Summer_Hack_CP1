@@ -48,7 +48,7 @@ def temporal_summary(posttimes):
         #monthly -aggregate by month
         dfm = df1.resample("M",closed='left').sum() 
 
-        return np.array((0.0,daterange,df1.mean(),df1.min(),df1.max(),df1.median(),df1.std(),df2.mean(),df2.min(),df2.max(),df2.median(),df2.std(),dfm.mean(),dfm.min(),dfm.max(),dfm.median(),dfm.std()))
+        return np.nan_to_num(np.array((0.0,daterange,df1.mean(),df1.min(),df1.max(),df1.median(),df1.std(),df2.mean(),df2.min(),df2.max(),df2.median(),df2.std(),dfm.mean(),dfm.min(),dfm.max(),dfm.median(),dfm.std())))
     else:
         return np.hstack((np.array([1.0]),np.zeros(16)))
 
