@@ -23,27 +23,16 @@ def get_static_features(lattice_cluster):
     probs = [x for x in probs if not x is None]
     ages = tuple(res for res in get_age(lattice_cluster))
     len_cluster = len(lattice_cluster)
-    return np.hstack((cluster_age_summary(ages,len_cluster),cluster_location_summary(coords,probs,len_cluster),temporal_summary(posttimes)))
+    return np.hstack((cluster_age_summary(ages,len_cluster),cluster_location_summary(coords,probs,len_cluster),temporal_summary(posttimes),spatiotemporal_summary(ret_time_loc)))
 
 def spatiotemporal_summary(ret_time_loc):
-    #time_coords_clean = [x for x in time_coords if not np.isnan(x).any()]
-        
     if len(ret_time_loc)>1:
         spatiotemp = list((area,disp) for area,disp in locationFeat_daily(ret_time_loc)) 
         #calculate min, mean,max, std area and disp
-        spatiotemp_mean = np.average(spatiotemp,0)
-        
-        
-        
-        return np.array((0.0,daterange,df1.mean(),df1.min(),df1.max(),df1.median(),df1.std(),df2.mean(),df2.min(),df2.max(),df2.median(),df2.std(),dfm.mean(),dfm.min(),dfm.max(),dfm.median(),dfm.std()))
+        return np.hstack((0.0,np.min(spatiotemp,0),np.max(spatiotemp,0),np.average(spatiotemp,0),np.median(spatiotemp,0),np.std(spatiotemp,0)))
     else:
-        return np.hstack((np.array([1.0]),np.zeros(16)))
+        return np.hstack((np.array([1.0]),np.zeros(10)))
 
-def locationFeat_daily(ret_time_loc):    
-    for k,g in groupby(ret_time_loc,lambda x:x[0]):
-        ret_time_loc_daily = list(g)
-        posttimes_daily,coords_daily,probs_daily = zip(*ret_time_loc_daily)
-        yield cluster_location_summary_daily(coords_daily,probs_daily)
 
 def temporal_summary(posttimes):
     #use strings of dates as they can be sorted without conversion
@@ -149,7 +138,15 @@ def cluster_location_summary_daily(locations_webMer,loc_prob):
     #return np.hstack((missing_lat_proportion,np.squeeze(centroid_cluster),area_cluster,disp_metric))
     return np.hstack((area_cluster,disp_metric))
 
-                
+
+
+def locationFeat_daily(ret_time_loc):    
+    for k,g in groupby(ret_time_loc,lambda x:x[0]):
+        ret_time_loc_daily = list(g)
+        posttimes_daily,coords_daily,probs_daily = zip(*ret_time_loc_daily)
+        yield cluster_location_summary_daily(coords_daily,probs_daily)
+                        
+                        
 def get_locations_and_time(cluster): 
     for item in cluster:
         if u'lattice-postdatetime' in item[u'extractions']:
