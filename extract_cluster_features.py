@@ -76,7 +76,7 @@ def cluster_age_summary(ages,len_cluster):
         ages = np.array(tuple(chain(*ages)))
 
     #vector that summarizes the age features of cluster
-        return np.array((np.array([0.0]),ages.mean(),ages.std(),np.median(ages),missing_age))
+        return np.array((0.0,ages.mean(),ages.std(),np.median(ages),missing_age))
     else:
         return np.hstack((np.array([1.0]),np.zeros(4)))
 
